@@ -1,0 +1,123 @@
+//SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Market {
+    
+    address public owner;
+    mapping(address => User) public users;
+
+    struct User{
+        string name; //姓名
+        string telephone; //电话
+        string sex;
+        string introduce;
+        string email;
+        bool status; //false是未注册 true是已注册
+    }
+
+ 
+
+    struct Advertisement{
+        uint id; //订单id
+        address publisher; //广告发布者
+        uint time; //广告发布时间
+        string imgUrl; //广告图片
+        string describe; //广告描述
+        uint status; //订单状态 0关闭 1审核中 2已上架  
+        
+    }
+
+    Advertisement[] public advertisements;
+ 
+    event NewAdvertisement(uint id, address publisher, uint time, string imgUrl, string describe); //创建广告
+    event CloseAdvertisement(uint aid); //终止订单项目
+
+    modifier onlyOwner(){
+        require(msg.sender == owner, "You don't have permission");
+        _;
+    }
+
+
+ 
+
+    constructor() {
+        owner = msg.sender;
+    }
+
+
+    function transferOwner(address _owner) public onlyOwner{
+        owner = _owner;
+    }
+
+
+    // 更新用户信息
+    function updateUser(
+        address account,  
+        string memory _sex, 
+        string memory _introduce,   
+        string memory _name, 
+        string memory _telephone, 
+        string memory _email,
+        bool _status
+    ) public onlyOwner returns(bool){
+      
+        users[account] = User({
+            sex: _sex,
+            introduce: _introduce,
+            name: _name,
+            email: _email,
+            telephone: _telephone,
+            status: _status
+        });
+        return true;
+    }
+
+ 
+    
+    // 添加信息
+    function newAdvertisement(string memory _imgUrl, string memory _describe) public returns(bool){
+        uint id = advertisements.length;
+        require(users[msg.sender].status, "You haven't registered yet");
+        Advertisement memory advertisement = Advertisement({
+            id: id,
+            publisher: msg.sender,
+            time: block.timestamp,
+            imgUrl: _imgUrl,
+            describe: _describe,
+            status: 1
+        });
+        advertisements.push(advertisement);
+        emit NewAdvertisement(id, msg.sender, block.timestamp, _imgUrl, _describe);
+        return true;
+    }
+
+    // 审核信息
+    function auditAdvertisement(uint _aid, uint _status) public onlyOwner returns(bool){
+        Advertisement storage a = advertisements[_aid];
+        require(a.status == 1, "The advertisement can not be audit");
+        a.status = _status;
+        return true;
+    }
+
+ 
+ 
+
+ 
+
+    // 关闭信息
+    function closeAdvertisement(uint _aid) public returns (bool){
+        Advertisement storage a = advertisements[_aid];
+        require(a.publisher == msg.sender || owner == msg.sender, "You don't have permission");
+        require(a.status == 1 || a.status == 2, "Advertisement can not be closed");
+        a.status = 0;
+        return true;
+    }
+
+ 
+
+     
+    // 总信息长度
+    function advertisementLength() public view returns(uint){
+        return advertisements.length;
+    }
+}
